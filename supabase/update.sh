@@ -10,4 +10,4 @@ else
 fi
 
 # copy files from ./repo/docker to ./code
-cp -r ./repo/docker/* ./code
+cp -r ./repo/docker/. ./code
