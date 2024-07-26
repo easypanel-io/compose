@@ -1,3 +1,5 @@
 # Supabase
 
-Copied and adapted from https://github.com/supabase/supabase/tree/master/docker
+- copied from https://github.com/supabase/supabase/tree/master/docker
+- removed `container_name`
+- removed `ports`
