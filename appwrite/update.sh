@@ -8,7 +8,7 @@ else
     cd ..
 fi
 
-cp ./repo/docker-compose.yml ./code/docker-compose.yml
-cp ./repo/.env ./code/.env.example
+curl -s https://appwrite.io/install/compose > ./code/docker-compose.yml
+curl -s https://appwrite.io/install/env > ./code/.env.example
 
 
