@@ -46,7 +46,7 @@ x-app-env: &app-env
     # RabbitMQ Settings for Services
     - RABBITMQ_HOST=${RABBITMQ_HOST:-plane-mq}
     - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-    - RABBITMQ_USER=${RABBITMQ_USER:-plane:-plane}
+    - RABBITMQ_USER=${RABBITMQ_USER:-plane}
     - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
     - RABBITMQ_VHOST=${RABBITMQ_VHOST:-plane}
 
