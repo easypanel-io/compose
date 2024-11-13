@@ -9,7 +9,8 @@ version: "3.8"
 
 services:
   studio:
-    image: supabase/studio:20240701-05dfbec
+    # container_name: supabase-studio
+    image: supabase/studio:20240923-2e3e90c
     restart: unless-stopped
     healthcheck:
       test:
@@ -47,10 +48,14 @@ services:
       # NEXT_ANALYTICS_BACKEND_PROVIDER: bigquery
 
   kong:
+    # container_name: supabase-kong
     image: kong:2.8.1
     restart: unless-stopped
     # https://unix.stackexchange.com/a/294837
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+    # ports:
+    #   - ${KONG_HTTP_PORT}:8000/tcp
+    #   - ${KONG_HTTPS_PORT}:8443/tcp
     depends_on:
       analytics:
         condition: service_healthy
@@ -71,7 +76,8 @@ services:
       - ./volumes/api/kong.yml:/home/kong/temp.yml:ro
 
   auth:
-    image: supabase/gotrue:v2.151.0
+    # container_name: supabase-auth
+    image: supabase/gotrue:v2.158.1
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -128,21 +134,32 @@ services:
 
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
-      # Uncomment to enable custom access token hook. You'll need to create a public.custom_access_token_hook function and grant necessary permissions.
-      # See: https://supabase.com/docs/guides/auth/auth-hooks#hook-custom-access-token for details
-      # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED="true"
-      # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI="pg-functions://postgres/public/custom_access_token_hook"
+      # Uncomment to enable custom access token hook. Please see: https://supabase.com/docs/guides/auth/auth-hooks for full list of hooks and additional details about custom_access_token_hook
 
-      # GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED="true"
-      # GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI="pg-functions://postgres/public/mfa_verification_attempt"
+      # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
+      # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: "pg-functions://postgres/public/custom_access_token_hook"
+      # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_SECRETS: "<standard-base64-secret>"
 
-      # GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED="true"
-      # GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI="pg-functions://postgres/public/password_verification_attempt"
+      # GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED: "true"
+      # GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI: "pg-functions://postgres/public/mfa_verification_attempt"
+
+      # GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED: "true"
+      # GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI: "pg-functions://postgres/public/password_verification_attempt"
+
+      # GOTRUE_HOOK_SEND_SMS_ENABLED: "false"
+      # GOTRUE_HOOK_SEND_SMS_URI: "pg-functions://postgres/public/custom_access_token_hook"
+      # GOTRUE_HOOK_SEND_SMS_SECRETS: "v1,whsec_VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgc2hvcnRlciBCYXNlNjQgc3RyaW5n"
+
+      # GOTRUE_HOOK_SEND_EMAIL_ENABLED: "false"
+      # GOTRUE_HOOK_SEND_EMAIL_URI: "http://host.docker.internal:54321/functions/v1/email_sender"
+      # GOTRUE_HOOK_SEND_EMAIL_SECRETS: "v1,whsec_VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgc2hvcnRlciBCYXNlNjQgc3RyaW5n"
+
 
 
 
 
   rest:
+    # container_name: supabase-rest
     image: postgrest/postgrest:v12.2.0
     depends_on:
       db:
@@ -163,7 +180,8 @@ services:
 
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
-    image: supabase/realtime:v2.29.15
+    # container_name: realtime-dev.supabase-realtime
+    image: supabase/realtime:v2.30.34
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -206,7 +224,8 @@ services:
 
   # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
   storage:
-    image: supabase/storage-api:v1.0.6
+    # container_name: supabase-storage
+    image: supabase/storage-api:v1.10.1
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -248,6 +267,7 @@ services:
       - ./volumes/storage:/var/lib/storage:z
 
   imgproxy:
+    # container_name: supabase-imgproxy
     image: darthsim/imgproxy:v3.8.0
     healthcheck:
       test: [ "CMD", "imgproxy", "health" ]
@@ -263,6 +283,7 @@ services:
       - ./volumes/storage:/var/lib/storage:z
 
   meta:
+    # container_name: supabase-meta
     image: supabase/postgres-meta:v0.83.2
     depends_on:
       db:
@@ -280,7 +301,8 @@ services:
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
 
   functions:
-    image: supabase/edge-runtime:v1.55.0
+    # container_name: supabase-edge-functions
+    image: supabase/edge-runtime:v1.58.3
     restart: unless-stopped
     depends_on:
       analytics:
@@ -301,6 +323,7 @@ services:
       - /home/deno/functions/main
 
   analytics:
+    # container_name: supabase-analytics
     image: supabase/logflare:1.4.0
     healthcheck:
       test: [ "CMD", "curl", "http://localhost:4000/health" ]
@@ -338,10 +361,13 @@ services:
       # Uncomment to use Big Query backend for analytics
       # GOOGLE_PROJECT_ID: ${GOOGLE_PROJECT_ID}
       # GOOGLE_PROJECT_NUMBER: ${GOOGLE_PROJECT_NUMBER}
+    # ports:
+    #   - 4000:4000
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
-    image: supabase/postgres:15.1.1.61
+    # container_name: supabase-db
+    image: supabase/postgres:15.1.1.78
     healthcheck:
       test: pg_isready -U postgres -h localhost
       interval: 5s
@@ -359,6 +385,9 @@ services:
       - -c
       - log_min_messages=fatal # prevents Realtime polling queries from appearing in logs
     restart: unless-stopped
+    # ports:
+    #   # Pass down internal port because it's set dynamically by other services
+    #   - ${POSTGRES_PORT}:${POSTGRES_PORT}
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT}
@@ -385,6 +414,7 @@ services:
       - db-config:/etc/postgresql-custom
 
   vector:
+    # container_name: supabase-vector
     image: timberio/vector:0.28.1-alpine
     healthcheck:
       test:
