@@ -34,15 +34,26 @@ x-app-env: &app-env
     - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-"secret-key"}
     - BUCKET_NAME=${BUCKET_NAME:-uploads}
     - FILE_SIZE_LIMIT=${FILE_SIZE_LIMIT:-5242880}
-    # Admin and Space URLs
+    # Admin, Space and Live URLs
     - ADMIN_BASE_URL=${ADMIN_BASE_URL}
     - SPACE_BASE_URL=${SPACE_BASE_URL}
     - APP_BASE_URL=${APP_BASE_URL}
+    - LIVE_BASE_PATH=${LIVE_BASE_URL}
+    # RabbitMQ Settings for RabbitMQ Image
+    - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-plane}
+    - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-plane}
+    - RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST:-plane}
+    # RabbitMQ Settings for Services
+    - RABBITMQ_HOST=${RABBITMQ_HOST:-plane-mq}
+    - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+    - RABBITMQ_USER=${RABBITMQ_USER:-plane:-plane}
+    - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+    - RABBITMQ_VHOST=${RABBITMQ_VHOST:-plane}
 
 services:
   web:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-frontend:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-frontend:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: unless-stopped
@@ -55,7 +66,7 @@ services:
 
   space:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-space:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-space:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: unless-stopped
@@ -69,7 +80,7 @@ services:
 
   admin:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-admin:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-admin:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: unless-stopped
@@ -82,7 +93,7 @@ services:
 
   api:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: unless-stopped
@@ -97,7 +108,7 @@ services:
 
   worker:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: unless-stopped
@@ -111,7 +122,7 @@ services:
 
   beat-worker:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: unless-stopped
@@ -125,7 +136,7 @@ services:
 
   migrator:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-backend:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: "no"
@@ -153,6 +164,19 @@ services:
     volumes:
       - redisdata:/data
 
+  plane-mq:
+    <<: *app-env
+    image: rabbitmq:3.13.6-management-alpine
+    restart: always
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  live:
+    <<: *app-env
+    image: ${DOCKERHUB_USER:-makeplane}/plane-live:${APP_RELEASE:-v0.23.1}
+    restart: always
+    command: node live/dist/server.js
+
   plane-minio:
     <<: *app-env
     image: minio/minio:latest
@@ -165,7 +189,7 @@ services:
   # Comment this if you already have a reverse proxy running
   proxy:
     <<: *app-env
-    image: ${DOCKERHUB_USER:-makeplane}/plane-proxy:${APP_RELEASE:-stable}
+    image: ${DOCKERHUB_USER:-makeplane}/plane-proxy:${APP_RELEASE:-v0.23.1}
     platform: ${DOCKER_PLATFORM:-}
     pull_policy: if_not_present
     restart: unless-stopped
@@ -173,6 +197,7 @@ services:
       - web
       - api
       - space
+      - admin
 
 volumes:
   pgdata:
@@ -182,3 +207,4 @@ volumes:
   logs_worker:
   logs_beat-worker:
   logs_migrator:
+  rabbitmq_data:
