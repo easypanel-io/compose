@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "scripts": {
+    "update": "node update.js"
+  },
+  "dependencies": {
+    "execa": "^9.5.1",
+    "glob": "^11.0.0",
+    "yaml": "^2.6.1"
+  }
+}
