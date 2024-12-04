@@ -50,7 +50,17 @@ resource "kubernetes_deployment" "twentycrm_worker" {
 
           env {
             name  = "PG_DATABASE_URL"
-            value = "postgres://twenty:${var.twentycrm_pgdb_admin_password}@${var.twentycrm_app_name}-db.${kubernetes_namespace.twentycrm.metadata.0.name}.svc.cluster.local/default"
+            value = "postgres://twenty:${var.twentycrm_pgdb_admin_password}@${kubernetes_service.twentycrm_db.metadata.0.name}.${kubernetes_namespace.twentycrm.metadata.0.name}.svc.cluster.local/default"
+          }
+
+          env {
+            name  = "CACHE_STORAGE_TYPE"
+            value = "redis"
+          }
+
+          env {
+            name  = "REDIS_URL"
+            value = "redis://${kubernetes_service.twentycrm_redis.metadata.0.name}.${kubernetes_namespace.twentycrm.metadata.0.name}.svc.cluster.local:6379"
           }
 
           env {
@@ -64,11 +74,11 @@ resource "kubernetes_deployment" "twentycrm_worker" {
           }
           env {
             name  = "MESSAGE_QUEUE_TYPE"
-            value = "pg-boss"
+            value = "bull-mq"
           }
 
           env {
-            name = "ACCESS_TOKEN_SECRET"
+            name = "APP_SECRET"
             value_from {
               secret_key_ref {
                 name = "tokens"
@@ -77,44 +87,14 @@ resource "kubernetes_deployment" "twentycrm_worker" {
             }
           }
 
-          env {
-            name = "LOGIN_TOKEN_SECRET"
-            value_from {
-              secret_key_ref {
-                name = "tokens"
-                key  = "loginToken"
-              }
-            }
-          }
-
-          env {
-            name = "REFRESH_TOKEN_SECRET"
-            value_from {
-              secret_key_ref {
-                name = "tokens"
-                key  = "refreshToken"
-              }
-            }
-          }
-
-          env {
-            name = "FILE_TOKEN_SECRET"
-            value_from {
-              secret_key_ref {
-                name = "tokens"
-                key  = "fileToken"
-              }
-            }
-          }
-
           resources {
             requests = {
               cpu    = "250m"
-              memory = "256Mi"
+              memory = "1024Mi"
             }
             limits = {
               cpu    = "1000m"
-              memory = "1024Mi"
+              memory = "2048Mi"
             }
           }
         }
@@ -126,6 +106,8 @@ resource "kubernetes_deployment" "twentycrm_worker" {
   }
   depends_on = [
     kubernetes_deployment.twentycrm_db,
-    kubernetes_secret.twentycrm_tokens
+    kubernetes_deployment.twentycrm_redis,
+    kubernetes_deployment.twentycrm_server,
+    kubernetes_secret.twentycrm_tokens,
   ]
 }

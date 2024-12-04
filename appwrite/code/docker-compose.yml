@@ -7,7 +7,6 @@ x-logging: &x-logging
 services:
   traefik:
     image: traefik:2.11
-    # container_name: appwrite-traefik
     <<: *x-logging
     command:
       - --providers.file.directory=/storage/config
@@ -18,9 +17,6 @@ services:
       - --entrypoints.appwrite_web.address=:80
       - --entrypoints.appwrite_websecure.address=:443
     restart: unless-stopped
-    # ports:
-    #   - 80:80
-    #   - 443:443
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - appwrite-config:/storage/config:ro
@@ -33,7 +29,6 @@ services:
 
   appwrite:
     image: appwrite/appwrite:1.6.0
-    # container_name: appwrite
     <<: *x-logging
     restart: unless-stopped
     networks:
@@ -61,7 +56,7 @@ services:
     depends_on:
       - mariadb
       - redis
-#      - clamav
+    #      - clamav
     environment:
       - _APP_ENV
       - _APP_WORKER_PER_CORE
@@ -158,7 +153,6 @@ services:
 
   appwrite-console:
     <<: *x-logging
-    # container_name: appwrite-console
     image: appwrite/console:5.0.12
     restart: unless-stopped
     networks:
@@ -181,7 +175,6 @@ services:
   appwrite-realtime:
     image: appwrite/appwrite:1.6.0
     entrypoint: realtime
-    # container_name: appwrite-realtime
     <<: *x-logging
     restart: unless-stopped
     labels:
@@ -225,7 +218,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-audits
     <<: *x-logging
-    # container_name: appwrite-worker-audits
     restart: unless-stopped
     networks:
       - appwrite
@@ -251,7 +243,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-webhooks
     <<: *x-logging
-    # container_name: appwrite-worker-webhooks
     restart: unless-stopped
     networks:
       - appwrite
@@ -279,7 +270,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-deletes
     <<: *x-logging
-    # container_name: appwrite-worker-deletes
     restart: unless-stopped
     networks:
       - appwrite
@@ -337,7 +327,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-databases
     <<: *x-logging
-    # container_name: appwrite-worker-databases
     restart: unless-stopped
     networks:
       - appwrite
@@ -363,7 +352,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-builds
     <<: *x-logging
-    # container_name: appwrite-worker-builds
     restart: unless-stopped
     networks:
       - appwrite
@@ -426,7 +414,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-certificates
     <<: *x-logging
-    # container_name: appwrite-worker-certificates
     restart: unless-stopped
     networks:
       - appwrite
@@ -459,7 +446,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-functions
     <<: *x-logging
-    # container_name: appwrite-worker-functions
     restart: unless-stopped
     networks:
       - appwrite
@@ -497,7 +483,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-mails
     <<: *x-logging
-    # container_name: appwrite-worker-mails
     restart: unless-stopped
     networks:
       - appwrite
@@ -529,7 +514,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-messaging
     <<: *x-logging
-    # container_name: appwrite-worker-messaging
     restart: unless-stopped
     networks:
       - appwrite
@@ -579,7 +563,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-migrations
     <<: *x-logging
-    # container_name: appwrite-worker-migrations
     restart: unless-stopped
     networks:
       - appwrite
@@ -609,7 +592,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: maintenance
     <<: *x-logging
-    # container_name: appwrite-task-maintenance
     restart: unless-stopped
     networks:
       - appwrite
@@ -642,7 +624,6 @@ services:
   appwrite-worker-usage:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-usage
-    # container_name: appwrite-worker-usage
     <<: *x-logging
     restart: unless-stopped
     networks:
@@ -671,7 +652,6 @@ services:
     image: appwrite/appwrite:1.6.0
     entrypoint: worker-usage-dump
     <<: *x-logging
-    # container_name: appwrite-worker-usage-dump
     networks:
       - appwrite
     depends_on:
@@ -697,7 +677,6 @@ services:
   appwrite-task-scheduler-functions:
     image: appwrite/appwrite:1.6.0
     entrypoint: schedule-functions
-    # container_name: appwrite-task-scheduler-functions
     <<: *x-logging
     restart: unless-stopped
     networks:
@@ -722,7 +701,6 @@ services:
   appwrite-task-scheduler-executions:
     image: appwrite/appwrite:1.6.0
     entrypoint: schedule-executions
-    # container_name: appwrite-task-scheduler-executions
     <<: *x-logging
     restart: unless-stopped
     networks:
@@ -747,7 +725,6 @@ services:
   appwrite-task-scheduler-messages:
     image: appwrite/appwrite:1.6.0
     entrypoint: schedule-messages
-    # container_name: appwrite-task-scheduler-messages
     <<: *x-logging
     restart: unless-stopped
     networks:
@@ -771,7 +748,6 @@ services:
 
   appwrite-assistant:
     image: appwrite/assistant:0.4.0
-    # container_name: appwrite-assistant
     <<: *x-logging
     restart: unless-stopped
     networks:
@@ -780,7 +756,6 @@ services:
       - _APP_ASSISTANT_OPENAI_API_KEY
 
   openruntimes-executor:
-    # container_name: openruntimes-executor
     hostname: exc1
     <<: *x-logging
     restart: unless-stopped
@@ -830,7 +805,6 @@ services:
 
   mariadb:
     image: mariadb:10.11 # fix issues when upgrading using: mysql_upgrade -u root -p
-    # container_name: appwrite-mariadb
     <<: *x-logging
     restart: unless-stopped
     networks:
@@ -847,22 +821,18 @@ services:
 
   redis:
     image: redis:7.2.4-alpine
-    # container_name: appwrite-redis
     <<: *x-logging
     restart: unless-stopped
     command: >
-      redis-server
-      --maxmemory            512mb
-      --maxmemory-policy     allkeys-lru
-      --maxmemory-samples    5
+      redis-server --maxmemory            512mb
+      --maxmemory-policy     allkeys-lru --maxmemory-samples    5
     networks:
       - appwrite
     volumes:
       - appwrite-redis:/data:rw
-
   # clamav:
   #   image: appwrite/clamav:1.2.0
-    container_name: appwrite-clamav
+  #   container_name: appwrite-clamav
   #   restart: unless-stopped
   #   networks:
   #     - appwrite
