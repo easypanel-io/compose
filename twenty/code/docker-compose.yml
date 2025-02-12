@@ -8,14 +8,17 @@ services:
       - server-local-data:/tmp/server-local-data
       - docker-data:/tmp/docker-data
     command: >
-      bash -c " chown -R 1000:1000 /tmp/server-local-data && chown -R 1000:1000
-      /tmp/docker-data"
+      bash -c "
+      chown -R 1000:1000 /tmp/server-local-data
+      && chown -R 1000:1000 /tmp/docker-data"
 
   server:
     image: twentycrm/twenty:${TAG:-latest}
     volumes:
       - server-local-data:/app/packages/twenty-server/${STORAGE_LOCAL_PATH:-.local-storage}
       - docker-data:/app/docker-data
+    ports:
+      - "3000"
     environment:
       PORT: 3000
       PG_DATABASE_URL: postgres://${PG_DATABASE_USER:-postgres}:${PG_DATABASE_PASSWORD:-postgres}@${PG_DATABASE_HOST:-db}:${PG_DATABASE_PORT:-5432}/default
@@ -42,7 +45,7 @@ services:
 
   worker:
     image: twentycrm/twenty:${TAG:-latest}
-    command: [ "yarn", "worker:prod" ]
+    command: ["yarn", "worker:prod"]
     environment:
       PG_DATABASE_URL: postgres://${PG_DATABASE_USER:-postgres}:${PG_DATABASE_PASSWORD:-postgres}@${PG_DATABASE_HOST:-db}:${PG_DATABASE_PORT:-5432}/default
       SERVER_URL: ${SERVER_URL}
