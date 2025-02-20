@@ -72,6 +72,15 @@ async function renameFile(src, dest) {
   await execa("mv", [src, dest]);
 }
 
+async function searchReplace(path, search, replace) {
+  console.log(`Searching and replacing ${search} with ${replace} in ${path}`);
+
+  const file = await fs.promises.readFile(path, "utf8");
+  const newFile = file.replaceAll(search, replace);
+
+  await fs.promises.writeFile(path, newFile);
+}
+
 export default {
   cloneOrPullRepo,
   removeContainerNames,
@@ -79,4 +88,5 @@ export default {
   copyDir,
   downloadFile,
   renameFile,
+  searchReplace,
 };
