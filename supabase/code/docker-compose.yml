@@ -10,7 +10,7 @@ version: "3.8"
 services:
   studio:
     # container_name: supabase-studio
-    image: supabase/studio:20240923-2e3e90c
+    image: supabase/studio:20241202-71e5240
     restart: unless-stopped
     healthcheck:
       test:
@@ -18,9 +18,9 @@ services:
           "CMD",
           "node",
           "-e",
-          "require('http').get('http://localhost:3000/api/profile', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+          "fetch('http://studio:3000/api/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})"
         ]
-      timeout: 5s
+      timeout: 10s
       interval: 5s
       retries: 3
     depends_on:
@@ -32,6 +32,7 @@ services:
 
       DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
       DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
 
       SUPABASE_URL: http://kong:8000
       SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
@@ -77,7 +78,7 @@ services:
 
   auth:
     # container_name: supabase-auth
-    image: supabase/gotrue:v2.158.1
+    image: supabase/gotrue:v2.164.0
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -181,7 +182,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     # container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.30.34
+    image: supabase/realtime:v2.33.70
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -225,7 +226,7 @@ services:
   # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
   storage:
     # container_name: supabase-storage
-    image: supabase/storage-api:v1.10.1
+    image: supabase/storage-api:v1.11.13
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -284,7 +285,7 @@ services:
 
   meta:
     # container_name: supabase-meta
-    image: supabase/postgres-meta:v0.83.2
+    image: supabase/postgres-meta:v0.84.2
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -302,7 +303,7 @@ services:
 
   functions:
     # container_name: supabase-edge-functions
-    image: supabase/edge-runtime:v1.58.3
+    image: supabase/edge-runtime:v1.65.3
     restart: unless-stopped
     depends_on:
       analytics:
@@ -367,7 +368,7 @@ services:
   # Comment out everything below this point if you are using an external Postgres database
   db:
     # container_name: supabase-db
-    image: supabase/postgres:15.1.1.78
+    image: supabase/postgres:15.6.1.146
     healthcheck:
       test: pg_isready -U postgres -h localhost
       interval: 5s
