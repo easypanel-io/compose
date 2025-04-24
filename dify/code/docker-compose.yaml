@@ -292,7 +292,7 @@ x-shared-env: &shared-api-worker-env
 services:
   # API service
   api:
-    image: langgenius/dify-api:0.13.0
+    image: langgenius/dify-api:1.3.0
     restart: always
     environment:
       # Use the shared environment variables.
@@ -312,7 +312,7 @@ services:
   # worker service
   # The Celery worker for processing the queue.
   worker:
-    image: langgenius/dify-api:0.13.0
+    image: langgenius/dify-api:1.3.0
     restart: always
     environment:
       # Use the shared environment variables.
@@ -331,7 +331,7 @@ services:
 
   # Frontend web application.
   web:
-    image: langgenius/dify-web:0.13.0
+    image: langgenius/dify-web:1.3.0
     restart: always
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-}
@@ -380,7 +380,7 @@ services:
 
   # The DifySandbox
   sandbox:
-    image: langgenius/dify-sandbox:0.2.10
+    image: langgenius/dify-sandbox:0.2.11
     restart: always
     environment:
       # The DifySandbox configurations
@@ -696,7 +696,7 @@ services:
       - milvus
 
   milvus-standalone:
-    image: milvusdb/milvus:v2.3.1
+    image: milvusdb/milvus:latest
     profiles:
       - milvus
     command: [ 'milvus', 'run', 'standalone' ]
