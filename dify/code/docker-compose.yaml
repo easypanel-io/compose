@@ -380,7 +380,7 @@ services:
 
   # The DifySandbox
   sandbox:
-    image: langgenius/dify-sandbox:latest
+    image: langgenius/dify-sandbox:0.2.12
     restart: always
     environment:
       # The DifySandbox configurations
@@ -519,7 +519,7 @@ services:
   # Qdrant vector store.
   # (if used, you need to set VECTOR_STORE to qdrant in the api & worker service.)
   qdrant:
-    image: langgenius/qdrant:latest
+    image: langgenius/qdrant:v1.7.3
     profiles:
       - qdrant
     restart: always
@@ -625,7 +625,7 @@ services:
 
   # OceanBase vector database
   oceanbase:
-    image: quay.io/oceanbase/oceanbase-ce:4.3.3.0-100000142024101215
+    image: oceanbase/oceanbase-ce:4.3.5.1-101000042025031818
     profiles:
       - oceanbase
     restart: always
@@ -696,7 +696,7 @@ services:
       - milvus
 
   milvus-standalone:
-    image: milvusdb/milvus:v2.3.1
+    image: milvusdb/milvus:v2.5.0-beta
     profiles:
       - milvus
     command: [ 'milvus', 'run', 'standalone' ]
