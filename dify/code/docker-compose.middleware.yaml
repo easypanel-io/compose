@@ -24,7 +24,52 @@ services:
       interval: 1s
       timeout: 3s
       retries: 30
-# plugin daemon
+
+  # The redis cache.
+  redis:
+    image: redis:6-alpine
+    restart: always
+    env_file:
+      - ./middleware.env
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-difyai123456}
+    volumes:
+      # Mount the redis data directory to the container.
+      - ${REDIS_HOST_VOLUME:-./volumes/redis/data}:/data
+    # Set the redis password when startup redis server.
+    command: redis-server --requirepass ${REDIS_PASSWORD:-difyai123456}
+    ports:
+      - "${EXPOSE_REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+
+  # The DifySandbox
+  sandbox:
+    image: langgenius/dify-sandbox:0.2.11
+    restart: always
+    env_file:
+      - ./middleware.env
+    environment:
+      # The DifySandbox configurations
+      # Make sure you are changing this key for your deployment with a strong key.
+      # You can generate a strong key using `openssl rand -base64 42`.
+      API_KEY: ${SANDBOX_API_KEY:-dify-sandbox}
+      GIN_MODE: ${SANDBOX_GIN_MODE:-release}
+      WORKER_TIMEOUT: ${SANDBOX_WORKER_TIMEOUT:-15}
+      ENABLE_NETWORK: ${SANDBOX_ENABLE_NETWORK:-true}
+      HTTP_PROXY: ${SANDBOX_HTTP_PROXY:-http://ssrf_proxy:3128}
+      HTTPS_PROXY: ${SANDBOX_HTTPS_PROXY:-http://ssrf_proxy:3128}
+      SANDBOX_PORT: ${SANDBOX_PORT:-8194}
+      PIP_MIRROR_URL: ${PIP_MIRROR_URL:-}
+    volumes:
+      - ./volumes/sandbox/dependencies:/dependencies
+      - ./volumes/sandbox/conf:/conf
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8194/health" ]
+    networks:
+      - ssrf_proxy_network
+
+  # plugin daemon
   plugin_daemon:
     image: langgenius/dify-plugin-daemon:0.0.8-local
     restart: always
@@ -75,44 +120,6 @@ services:
       - "${EXPOSE_PLUGIN_DEBUGGING_PORT:-5003}:${PLUGIN_DEBUGGING_PORT:-5003}"
     volumes:
       - ./volumes/plugin_daemon:/app/storage
-  # The redis cache.
-  redis:
-    image: redis:6-alpine
-    restart: always
-    environment:
-      REDISCLI_AUTH: ${REDIS_PASSWORD:-difyai123456}
-    volumes:
-      # Mount the redis data directory to the container.
-      - ${REDIS_HOST_VOLUME:-./volumes/redis/data}:/data
-    # Set the redis password when startup redis server.
-    command: redis-server --requirepass ${REDIS_PASSWORD:-difyai123456}
-    ports:
-      - "${EXPOSE_REDIS_PORT:-6379}:6379"
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-
-  # The DifySandbox
-  sandbox:
-    image: langgenius/dify-sandbox:0.2.11
-    restart: always
-    environment:
-      # The DifySandbox configurations
-      # Make sure you are changing this key for your deployment with a strong key.
-      # You can generate a strong key using `openssl rand -base64 42`.
-      API_KEY: ${SANDBOX_API_KEY:-dify-sandbox}
-      GIN_MODE: ${SANDBOX_GIN_MODE:-release}
-      WORKER_TIMEOUT: ${SANDBOX_WORKER_TIMEOUT:-15}
-      ENABLE_NETWORK: ${SANDBOX_ENABLE_NETWORK:-true}
-      HTTP_PROXY: ${SANDBOX_HTTP_PROXY:-http://ssrf_proxy:3128}
-      HTTPS_PROXY: ${SANDBOX_HTTPS_PROXY:-http://ssrf_proxy:3128}
-      SANDBOX_PORT: ${SANDBOX_PORT:-8194}
-    volumes:
-      - ./volumes/sandbox/dependencies:/dependencies
-      - ./volumes/sandbox/conf:/conf
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8194/health" ]
-    networks:
-      - ssrf_proxy_network
 
   # ssrf_proxy server
   # for more information, please refer to
@@ -124,6 +131,8 @@ services:
       - ./ssrf_proxy/squid.conf.template:/etc/squid/squid.conf.template
       - ./ssrf_proxy/docker-entrypoint.sh:/docker-entrypoint-mount.sh
     entrypoint: [ "sh", "-c", "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i 's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh" ]
+    env_file:
+      - ./middleware.env
     environment:
       # pls clearly modify the squid env vars to fit your network environment.
       HTTP_PORT: ${SSRF_HTTP_PORT:-3128}
