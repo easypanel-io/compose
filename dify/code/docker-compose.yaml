@@ -595,17 +595,7 @@ services:
     volumes:
       - ./volumes/db/data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          'CMD',
-          'pg_isready',
-          '-h',
-          'db',
-          '-U',
-          '${PGUSER:-postgres}',
-          '-d',
-          '${POSTGRES_DB:-dify}'
-        ]
+      test: [ 'CMD', 'pg_isready', '-h', 'db', '-U', '${PGUSER:-postgres}', '-d', '${POSTGRES_DB:-dify}' ]
       interval: 1s
       timeout: 3s
       retries: 60
@@ -709,14 +699,7 @@ services:
     volumes:
       - ./ssrf_proxy/squid.conf.template:/etc/squid/squid.conf.template
       - ./ssrf_proxy/docker-entrypoint.sh:/docker-entrypoint-mount.sh
-    entrypoint:
-      [
-        'sh',
-        '-c',
-        "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i
-          's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh &&
-          /docker-entrypoint.sh"
-      ]
+    entrypoint: [ 'sh', '-c', "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i 's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh" ]
     environment:
       # pls clearly modify the squid env vars to fit your network environment.
       HTTP_PORT: ${SSRF_HTTP_PORT:-3128}
@@ -763,14 +746,7 @@ services:
       - ./volumes/certbot/conf/live:/etc/letsencrypt/live # cert dir (with certbot container)
       - ./volumes/certbot/conf:/etc/letsencrypt
       - ./volumes/certbot/www:/var/www/html
-    entrypoint:
-      [
-        'sh',
-        '-c',
-        "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i
-          's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh &&
-          /docker-entrypoint.sh"
-      ]
+    entrypoint: [ 'sh', '-c', "cp /docker-entrypoint-mount.sh /docker-entrypoint.sh && sed -i 's/\r$$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh && /docker-entrypoint.sh" ]
     environment:
       NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-_}
       NGINX_HTTPS_ENABLED: ${NGINX_HTTPS_ENABLED:-false}
@@ -855,13 +831,7 @@ services:
       - ./volumes/couchbase/data:/opt/couchbase/var/lib/couchbase/data
     healthcheck:
       # ensure bucket was created before proceeding
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s -f -u Administrator:password
-            http://localhost:8091/pools/default/buckets | grep -q '\\[{' || exit
-            1"
-        ]
+      test: [ "CMD-SHELL", "curl -s -f -u Administrator:password http://localhost:8091/pools/default/buckets | grep -q '\\[{' || exit 1" ]
       interval: 10s
       retries: 10
       start_period: 30s
@@ -905,6 +875,8 @@ services:
       - VB_DB=dify
       - VB_USERNAME=dify
       - VB_PASSWORD=Difyai123456
+    ports:
+      - '5434:5432'
     volumes:
       - ./vastbase/lic:/home/vastbase/vastbase/lic
       - ./vastbase/data:/home/vastbase/data
@@ -969,6 +941,8 @@ services:
       OB_CLUSTER_NAME: ${OCEANBASE_CLUSTER_NAME:-difyai}
       OB_SERVER_IP: 127.0.0.1
       MODE: MINI
+    ports:
+      - "${OCEANBASE_VECTOR_PORT:-2881}:2881"
 
   # Oracle vector database
   oracle:
@@ -998,8 +972,7 @@ services:
       ETCD_SNAPSHOT_COUNT: ${ETCD_SNAPSHOT_COUNT:-50000}
     volumes:
       - ./volumes/milvus/etcd:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls
-      http://0.0.0.0:2379 --data-dir /etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     healthcheck:
       test: [ 'CMD', 'etcdctl', 'endpoint', 'health' ]
       interval: 30s
@@ -1048,6 +1021,9 @@ services:
     depends_on:
       - etcd
       - minio
+    ports:
+      - 19530:19530
+      - 9091:9091
     networks:
       - milvus
 
@@ -1060,8 +1036,7 @@ services:
     environment:
       discovery.type: ${OPENSEARCH_DISCOVERY_TYPE:-single-node}
       bootstrap.memory_lock: ${OPENSEARCH_BOOTSTRAP_MEMORY_LOCK:-true}
-      OPENSEARCH_JAVA_OPTS: -Xms${OPENSEARCH_JAVA_OPTS_MIN:-512m}
-        -Xmx${OPENSEARCH_JAVA_OPTS_MAX:-1024m}
+      OPENSEARCH_JAVA_OPTS: -Xms${OPENSEARCH_JAVA_OPTS_MIN:-512m} -Xmx${OPENSEARCH_JAVA_OPTS_MAX:-1024m}
       OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-Qazwsxedc!@#123}
     ulimits:
       memlock:
@@ -1108,6 +1083,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
+    ports:
+      - ${OPENGAUSS_PORT:-6600}:${OPENGAUSS_PORT:-6600}
 
   # MyScale vector database
   myscale:
@@ -1121,6 +1098,8 @@ services:
       - ./volumes/myscale/data:/var/lib/clickhouse
       - ./volumes/myscale/log:/var/log/clickhouse-server
       - ./volumes/myscale/config/users.d/custom_users_config.xml:/etc/clickhouse-server/users.d/custom_users_config.xml
+    ports:
+      - ${MYSCALE_PORT:-8123}:${MYSCALE_PORT:-8123}
 
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/settings.html
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites
@@ -1144,6 +1123,8 @@ services:
       xpack.security.enabled: 'true'
       xpack.security.enrollment.enabled: 'false'
       xpack.security.http.ssl.enabled: 'false'
+    ports:
+      - ${ELASTICSEARCH_PORT:-9200}:9200
     deploy:
       resources:
         limits:
@@ -1175,6 +1156,8 @@ services:
       I18N_LOCALE: zh-CN
       SERVER_PORT: '5601'
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - ${KIBANA_PORT:-5601}:5601
     healthcheck:
       test: [ 'CMD-SHELL', 'curl -s http://localhost:5601 >/dev/null || exit 1' ]
       interval: 30s
