@@ -21,11 +21,11 @@ await utils.searchReplace(
 await utils.searchReplace(
   "./code/.env.example",
   "WEB_URL=http://${APP_DOMAIN}",
-  "WEB_URL=$(PRIMARY_DOMAIN)"
+  "WEB_URL=https://$(PRIMARY_DOMAIN)"
 );
 
 await utils.searchReplace(
   "./code/.env.example",
   "CORS_ALLOWED_ORIGINS=http://${APP_DOMAIN}",
-  "CORS_ALLOWED_ORIGINS=$(PRIMARY_DOMAIN)"
+  "CORS_ALLOWED_ORIGINS=https://$(PRIMARY_DOMAIN)"
 );
