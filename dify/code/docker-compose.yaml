@@ -692,6 +692,8 @@ services:
       ALIYUN_OSS_ACCESS_KEY_SECRET: ${PLUGIN_ALIYUN_OSS_ACCESS_KEY_SECRET:-}
       ALIYUN_OSS_AUTH_VERSION: ${PLUGIN_ALIYUN_OSS_AUTH_VERSION:-v4}
       ALIYUN_OSS_PATH: ${PLUGIN_ALIYUN_OSS_PATH:-}
+    ports:
+      - 5003:5003
     volumes:
       - ./volumes/plugin_daemon:/app/storage
     depends_on:
