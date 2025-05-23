@@ -767,6 +767,8 @@ services:
     depends_on:
       - api
       - web
+    ports:
+      - 80
 
   # The Weaviate vector store.
   weaviate:
