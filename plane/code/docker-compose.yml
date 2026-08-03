@@ -214,17 +214,20 @@ services:
 
   # Comment this if you already have a reverse proxy running
   proxy:
-    image: artifacts.plane.so/makeplane/plane-proxy:${APP_RELEASE:-stable}
-    environment:
-      <<: *proxy-env
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    depends_on:
-      - web
-      - api
-      - space
+      image: artifacts.plane.so/makeplane/plane-proxy:${APP_RELEASE:-stable}
+      environment:
+        <<: *proxy-env
+      deploy:
+        replicas: 1
+        restart_policy:
+          condition: on-failure
+      depends_on:
+        - web
+        - api
+        - space
+      networks:
+        - default
+        - easypanel
 
 volumes:
   pgdata:
@@ -235,3 +238,8 @@ volumes:
   logs_beat-worker:
   logs_migrator:
   rabbitmq_data:
+
+networks:
+  default:
+  easypanel:
+    external: true
