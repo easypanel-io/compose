@@ -165,8 +165,9 @@ services:
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: ${ENABLE_ANONYMOUS_USERS}
       GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM}
 
-      # Uncomment to bypass nonce check in ID Token flow. Commonly set to true when using Google Sign In on mobile.
-      # GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: "true"
+      # Necesario para Google Sign In nativo en movil (flujo signInWithIdToken).
+      # Ponlo en "true" en el .env solo si usas login nativo, no con redirect.
+      GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: ${SKIP_NONCE_CHECK:-false}
 
       # GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: "true"
       # GOTRUE_SMTP_MAX_FREQUENCY: 1s
@@ -183,11 +184,23 @@ services:
 
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
-      # Uncomment to enable OAuth / social login providers.
-      # GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}
-      # GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      # GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}
-      # GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # --- OAuth / social login ---
+      # Google. CLIENT_ID admite varios IDs separados por coma: el de Web
+      # (necesario para el flujo con redirect) y los nativos de iOS/Android
+      # (necesarios para signInWithIdToken).
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET:-}
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+
+      # Apple. En APPLE_CLIENT_ID va el Services ID (flujo web) y, si usas
+      # Sign in with Apple nativo, tambien el bundle ID separado por coma.
+      # APPLE_SECRET NO es una contrasena: es un JWT que se genera desde la
+      # clave .p8 y caduca a los 6 meses como maximo (hay que regenerarlo).
+      GOTRUE_EXTERNAL_APPLE_ENABLED: ${APPLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_APPLE_SECRET: ${APPLE_SECRET:-}
+      GOTRUE_EXTERNAL_APPLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
 
       # GOTRUE_EXTERNAL_GITHUB_ENABLED: ${GITHUB_ENABLED}
       # GOTRUE_EXTERNAL_GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
