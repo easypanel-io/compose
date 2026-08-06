@@ -76,7 +76,6 @@ services:
 
   kong:
     image: kong/kong:3.9.1
-    container_name: supabase-kong
     restart: unless-stopped
     networks:
       default:
@@ -120,7 +119,6 @@ services:
 
   auth:
     image: supabase/gotrue:v2.186.0
-    container_name: supabase-auth
     restart: unless-stopped
     healthcheck:
       test:
@@ -268,7 +266,6 @@ services:
 
   rest:
     image: postgrest/postgrest:v14.8
-    container_name: supabase-rest
     restart: unless-stopped
     depends_on:
       db:
@@ -292,10 +289,16 @@ services:
     command: [ "postgrest" ]
 
   realtime:
-    # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
+    # El hostname parece inconsistente pero es correcto: Realtime deriva el
+    # tenant id parseando el subdominio del host, y Kong lo llama por este
+    # nombre (ver volumes/api/kong.yml). Usamos un alias de red en vez de
+    # container_name porque el alias esta aislado por proyecto y no colisiona.
     image: supabase/realtime:v2.76.5
-    container_name: realtime-dev.supabase-realtime
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - realtime-dev.supabase-realtime
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -341,7 +344,6 @@ services:
   # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
   storage:
     image: supabase/storage-api:v1.48.26
-    container_name: supabase-storage
     restart: unless-stopped
     depends_on:
       db:
@@ -437,7 +439,6 @@ services:
 
   functions:
     image: supabase/edge-runtime:v1.71.2
-    container_name: supabase-edge-functions
     restart: unless-stopped
     volumes:
       - ./volumes/functions:/home/deno/functions:Z
@@ -463,7 +464,6 @@ services:
 
   analytics:
     image: supabase/logflare:1.36.1
-    container_name: supabase-analytics
     restart: unless-stopped
     # ports:
     #   - 4000:4000
@@ -506,7 +506,6 @@ services:
       # Comment out everything below this point if you are using an external Postgres database
   db:
     image: supabase/postgres:15.8.1.085
-    container_name: supabase-db
     restart: unless-stopped
     volumes:
       - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
@@ -552,7 +551,6 @@ services:
 
   vector:
     image: timberio/vector:0.53.0-alpine
-    container_name: supabase-vector
     restart: unless-stopped
     volumes:
       - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
@@ -572,6 +570,10 @@ services:
       retries: 3
     environment:
       LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      # Nombre del proyecto/stack en Docker. Vector solo recoge logs de los
+      # contenedores etiquetados con este valor, para no mezclar los logs de
+      # otros stacks desplegados en el mismo host.
+      LOGS_STACK_NAME: ${LOGS_STACK_NAME:-supabase}
     command: [ "--config", "/etc/vector/vector.yml" ]
     security_opt:
       - "label=disable"
