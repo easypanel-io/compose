@@ -5,8 +5,17 @@ api:
 sources:
   docker_host:
     type: docker_logs
-    exclude_containers:
-      - supabase-vector
+    # Filtramos por las labels que Docker pone automaticamente en cada
+    # contenedor en lugar de por container_name, para que este stack no lea
+    # los logs de otros proyectos que convivan en el mismo host (Easypanel).
+    # Compose usa com.docker.compose.*, Swarm usa com.docker.stack.namespace.
+    include_labels:
+      - "com.docker.compose.project=${LOGS_STACK_NAME:-supabase}"
+      - "com.docker.stack.namespace=${LOGS_STACK_NAME:-supabase}"
+    # Evita que Vector procese sus propios logs (bucle de realimentacion)
+    exclude_labels:
+      - "com.docker.compose.service=vector"
+      - "com.docker.swarm.service.name=${LOGS_STACK_NAME:-supabase}_vector"
 
 transforms:
   project_logs:
@@ -16,7 +25,22 @@ transforms:
     source: |-
       .project = "default"
       .event_message = del(.message)
-      .appname = del(.container_name)
+
+      # .appname pasa a ser el NOMBRE DEL SERVICIO en compose (auth, rest, db...),
+      # no el nombre del contenedor. Compose lo expone directamente; Swarm solo
+      # publica "<stack>_<servicio>", asi que le quitamos el prefijo del stack.
+      compose_service = .label."com.docker.compose.service" || ""
+      swarm_service = .label."com.docker.swarm.service.name" || ""
+      stack = .label."com.docker.stack.namespace" || ""
+      if compose_service != "" {
+        .appname = compose_service
+      } else if stack != "" {
+        .appname = replace(string!(swarm_service), string!(stack) + "_", "", count: 1)
+      } else {
+        .appname = .container_name
+      }
+
+      del(.container_name)
       del(.container_created_at)
       del(.container_id)
       del(.source_type)
@@ -30,13 +54,13 @@ transforms:
     inputs:
       - project_logs
     route:
-      kong: '.appname == "supabase-kong" || .appname == "supabase-envoy"'
-      auth: '.appname == "supabase-auth"'
-      rest: '.appname == "supabase-rest"'
-      realtime: '.appname == "realtime-dev.supabase-realtime"'
-      storage: '.appname == "supabase-storage"'
-      functions: '.appname == "supabase-edge-functions"'
-      db: '.appname == "supabase-db"'
+      kong: '.appname == "kong" || .appname == "envoy"'
+      auth: '.appname == "auth"'
+      rest: '.appname == "rest"'
+      realtime: '.appname == "realtime"'
+      storage: '.appname == "storage"'
+      functions: '.appname == "functions"'
+      db: '.appname == "db"'
   # Ignores non nginx errors since they are related with kong booting up
   kong_logs:
     type: remap

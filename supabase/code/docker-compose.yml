@@ -12,70 +12,11 @@ name: supabase
 
 services:
 
-  studio:
-    image: supabase/studio:2026.04.27-sha-5f60601
-    restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "node -e
-            \"fetch('http://localhost:3000/api/platform/profile').then((r) =>
-            {if (r.status !== 200) throw new Error(r.status)})\""
-        ]
-      timeout: 10s
-      interval: 5s
-      retries: 3
-    depends_on:
-      analytics:
-        condition: service_healthy
-    environment:
-      #  Listen on all IPv4 interfaces
-      HOSTNAME: "0.0.0.0"
-
-      STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-      # See: https://supabase.com/docs/guides/self-hosting/remove-superuser-access
-      #POSTGRES_USER_READ_WRITE: postgres
-
-      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
-      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
-      PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
-      PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
-
-      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
-      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-
-      SUPABASE_URL: http://kong:8000
-      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
-      SUPABASE_ANON_KEY: ${ANON_KEY}
-      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
-      AUTH_JWT_SECRET: ${JWT_SECRET}
-
-      # LOGFLARE_API_KEY is deprecated
-      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
-
-      LOGFLARE_URL: http://analytics:4000
-      NEXT_PUBLIC_ENABLE_LOGS: "true"
-      # Comment to use Big Query backend for analytics
-      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
-      # Uncomment to use Big Query backend for analytics
-      # NEXT_ANALYTICS_BACKEND_PROVIDER: bigquery
-      SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
-      EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
-    volumes:
-      - ./volumes/snippets:/app/snippets:Z
-      - ./volumes/functions:/app/edge-functions:Z
-
   kong:
     image: kong/kong:3.9.1
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.75
+    mem_limit: 512m
     restart: unless-stopped
     networks:
       default:
@@ -87,7 +28,7 @@ services:
       timeout: 5s
       retries: 5
     depends_on:
-      studio:
+      db:
         condition: service_healthy
     volumes:
       # https://github.com/supabase/supabase/issues/12661
@@ -119,6 +60,9 @@ services:
 
   auth:
     image: supabase/gotrue:v2.186.0
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.25
+    mem_limit: 256m
     restart: unless-stopped
     healthcheck:
       test:
@@ -165,8 +109,9 @@ services:
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: ${ENABLE_ANONYMOUS_USERS}
       GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM}
 
-      # Uncomment to bypass nonce check in ID Token flow. Commonly set to true when using Google Sign In on mobile.
-      # GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: "true"
+      # Necesario para Google Sign In nativo en movil (flujo signInWithIdToken).
+      # Ponlo en "true" en el .env solo si usas login nativo, no con redirect.
+      GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: ${SKIP_NONCE_CHECK:-false}
 
       # GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: "true"
       # GOTRUE_SMTP_MAX_FREQUENCY: 1s
@@ -183,11 +128,23 @@ services:
 
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
-      # Uncomment to enable OAuth / social login providers.
-      # GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}
-      # GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      # GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}
-      # GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # --- OAuth / social login ---
+      # Google. CLIENT_ID admite varios IDs separados por coma: el de Web
+      # (necesario para el flujo con redirect) y los nativos de iOS/Android
+      # (necesarios para signInWithIdToken).
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET:-}
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+
+      # Apple. En APPLE_CLIENT_ID va el Services ID (flujo web) y, si usas
+      # Sign in with Apple nativo, tambien el bundle ID separado por coma.
+      # APPLE_SECRET NO es una contrasena: es un JWT que se genera desde la
+      # clave .p8 y caduca a los 6 meses como maximo (hay que regenerarlo).
+      GOTRUE_EXTERNAL_APPLE_ENABLED: ${APPLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_APPLE_SECRET: ${APPLE_SECRET:-}
+      GOTRUE_EXTERNAL_APPLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
 
       # GOTRUE_EXTERNAL_GITHUB_ENABLED: ${GITHUB_ENABLED}
       # GOTRUE_EXTERNAL_GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
@@ -253,6 +210,9 @@ services:
 
   rest:
     image: postgrest/postgrest:v14.8
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.25
+    mem_limit: 256m
     restart: unless-stopped
     depends_on:
       db:
@@ -276,9 +236,19 @@ services:
     command: [ "postgrest" ]
 
   realtime:
-    # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
+    # El hostname parece inconsistente pero es correcto: Realtime deriva el
+    # tenant id parseando el subdominio del host, y Kong lo llama por este
+    # nombre (ver volumes/api/kong.yml). Usamos un alias de red en vez de
+    # container_name porque el alias esta aislado por proyecto y no colisiona.
     image: supabase/realtime:v2.76.5
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.5
+    mem_limit: 512m
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - realtime-dev.supabase-realtime
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -324,6 +294,9 @@ services:
   # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
   storage:
     image: supabase/storage-api:v1.48.26
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.25
+    mem_limit: 512m
     restart: unless-stopped
     depends_on:
       db:
@@ -386,6 +359,9 @@ services:
 
   imgproxy:
     image: darthsim/imgproxy:v3.30.1
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.5
+    mem_limit: 256m
     restart: unless-stopped
     volumes:
       - ./volumes/storage:/var/lib/storage:z
@@ -403,6 +379,9 @@ services:
 
   meta:
     image: supabase/postgres-meta:v0.96.3
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.25
+    mem_limit: 256m
     restart: unless-stopped
     depends_on:
       db:
@@ -419,6 +398,9 @@ services:
 
   functions:
     image: supabase/edge-runtime:v1.71.2
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.5
+    mem_limit: 512m
     restart: unless-stopped
     volumes:
       - ./volumes/functions:/home/deno/functions:Z
@@ -442,50 +424,11 @@ services:
       VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
     command: [ "start", "--main-service", "/home/deno/functions/main" ]
 
-  analytics:
-    image: supabase/logflare:1.36.1
-    restart: unless-stopped
-    # ports:
-    #   - 4000:4000
-    # Uncomment to use Big Query backend for analytics
-    # volumes:
-    #   - type: bind
-    #     source: ${PWD}/gcloud.json
-    #     target: /opt/app/rel/logflare/bin/gcloud.json
-    #     read_only: true
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -sSfL -o /dev/null http://localhost:4000/health" ]
-      timeout: 5s
-      interval: 5s
-      retries: 10
-    depends_on:
-      db:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
-    environment:
-      LOGFLARE_NODE_HOST: 127.0.0.1
-      DB_USERNAME: supabase_admin
-      DB_DATABASE: _supabase
-      DB_HOSTNAME: ${POSTGRES_HOST}
-      DB_PORT: ${POSTGRES_PORT}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_SCHEMA: _analytics
-      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
-      LOGFLARE_SINGLE_TENANT: "true"
-      LOGFLARE_SUPABASE_MODE: "true"
-
-      # Comment variables to use Big Query backend for analytics
-      POSTGRES_BACKEND_URL: postgresql://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
-      POSTGRES_BACKEND_SCHEMA: _analytics
-      LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
-      # Uncomment to use Big Query backend for analytics
-      # GOOGLE_PROJECT_ID: ${GOOGLE_PROJECT_ID}
-      # GOOGLE_PROJECT_NUMBER: ${GOOGLE_PROJECT_NUMBER}
-
-      # Comment out everything below this point if you are using an external Postgres database
   db:
     image: supabase/postgres:15.8.1.085
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 1.0
+    mem_limit: 1g
     restart: unless-stopped
     volumes:
       - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
@@ -529,34 +472,11 @@ services:
         "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
       ]
 
-  vector:
-    image: timberio/vector:0.53.0-alpine
-    restart: unless-stopped
-    volumes:
-      - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
-      - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://vector:9001/health"
-        ]
-      timeout: 5s
-      interval: 5s
-      retries: 3
-    environment:
-      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-    command: [ "--config", "/etc/vector/vector.yml" ]
-    security_opt:
-      - "label=disable"
-
-  # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
     image: supabase/supavisor:2.7.4
+    # Límite por contenedor: evita que un stack ahogue a los demás en el VPS compartido.
+    cpus: 0.5
+    mem_limit: 512m
     restart: unless-stopped
     volumes:
       - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z

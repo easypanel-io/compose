@@ -1,0 +1,35 @@
+# Núcleo Supabase multi-tenant: UN Postgres compartido con una base de datos por
+# tienda. Los servicios por tienda (gotrue/postgrest/storage/edge-runtime, ~185MB
+# por tienda) los maneja el provisioner (/opt/supabase-provisioner/mt/) como
+# contenedores docker planos — este servicio de EasyPanel solo hace visible y
+# gestiona el núcleo. El volumen y la red son EXTERNOS: redeployar este servicio
+# no toca los datos ni desconecta a las tiendas.
+services:
+  core-db:
+    image: supabase/postgres:15.8.1.085
+    restart: unless-stopped
+    cpus: 2
+    mem_limit: 3g
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - mt_core_db_data:/var/lib/postgresql/data
+    networks:
+      mtnet:
+        # Las tiendas (gotrue/postgrest/storage/functions) se conectan por este
+        # nombre DNS — el alias reemplaza al container_name fijo que EasyPanel marca.
+        aliases:
+          - mt-core-db
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mt_core_db_data:
+    external: true
+
+networks:
+  mtnet:
+    external: true
