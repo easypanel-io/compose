@@ -7,7 +7,6 @@
 services:
   core-db:
     image: supabase/postgres:15.8.1.085
-    container_name: mt-core-db
     restart: unless-stopped
     cpus: 2
     mem_limit: 3g
@@ -16,7 +15,11 @@ services:
     volumes:
       - mt_core_db_data:/var/lib/postgresql/data
     networks:
-      - mtnet
+      mtnet:
+        # Las tiendas (gotrue/postgrest/storage/functions) se conectan por este
+        # nombre DNS — el alias reemplaza al container_name fijo que EasyPanel marca.
+        aliases:
+          - mt-core-db
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
